@@ -1,7 +1,8 @@
-name: crypto
+name: cryptotrack
 dependencies: 
 - python=3
 - click
 - pip
 - pip:
+   - privy
    - ccxt
