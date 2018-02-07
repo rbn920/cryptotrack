@@ -1,0 +1,7 @@
+name: crypto
+dependencies: 
+- python=3
+- click
+- pip
+- pip:
+   - ccxt
