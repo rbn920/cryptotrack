@@ -1,16 +1,36 @@
 import click
 import configparser
 import privy
+import os
 
 
 class Config:
     def __init__(self, password):
-        self._load()
-        self.password = password.encode()
+        password = password.encode()
+        if os.path.isfile('config.ini'):
+            self.__load_config(password)
+        else:
+            self.__new_config(password)
 
-    def _load(self):
+    def __new_config(self, password):
+        '''try to get rid of repeated code in __new and __load methods'''
+
+        self.password = password
         self.config = configparser.ConfigParser()
         self.config.read('config.ini')
+        enc_password = privy.hide(password, password, security=5)
+        self.config['user'] = {'password': enc_password}
+        self.config.write(open('config.ini', 'w'))
+        self.keys = {}
+        self.secrets = {}
+
+    def __load_config(self, password):
+        '''try to get rid of repeated code in __new and __load methods'''
+
+        self.config = configparser.ConfigParser()
+        self.config.read('config.ini')
+        enc_password = self.config['user']['password']
+        self.password = privy.peek(enc_password, password)
         self.existing = self.config.has_section('keys')
         if self.existing:
             self.keys = {k: self.config['keys'][k] for
@@ -21,19 +41,20 @@ class Config:
             self.keys = {}
             self.secrets = {}
 
-    def _encrypt(self, key, secret):
+    def __encrypt(self, key, secret):
+        '''change so you can also encrypt password'''
+
         return [privy.hide(key.encode(), self.password, security=5),
                 privy.hide(secret.encode(), self.password, security=5)]
 
-    def _decrypt(self, key, secret):
-        return [privy.peek(key, self.password, security=5),
-                privy.peek(secret, self.password, security=5)]
+    def __decrypt(self, key, secret):
+        '''change so you can also encrypt password'''
 
-    def add_password(self, password):
-        pass
+        return [privy.peek(key, self.password),
+                privy.peek(secret, self.password)]
 
     def add_keys(self, name, key, secret):
-        enc_key, enc_secret = self._encrypt(key, secret)
+        enc_key, enc_secret = self.__encrypt(key, secret)
         self.keys[name] = enc_key
         self.secrets[name] = enc_secret
         self.config['keys'] = self.keys
