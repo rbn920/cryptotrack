@@ -2,6 +2,7 @@ import click
 import configparser
 import privy
 import os
+import ccxt
 
 
 class Config:
@@ -33,9 +34,9 @@ class Config:
         self.password = privy.peek(enc_password, password)
         self.existing = self.config.has_section('keys')
         if self.existing:
-            self.keys = {k: self.config['keys'][k] for
+            self.keys = {k: privy.peek(self.config['keys'][k], self.password) for
                          k in self.config['keys']}
-            self.secrets = {k: self.config['secrets'][k] for
+            self.secrets = {k: privy.peek(self.config['secrets'][k], self.password) for
                             k in self.config['secrets']}
         else:
             self.keys = {}
@@ -66,6 +67,30 @@ class Config:
 pass_config = click.make_pass_decorator(Config)
 
 
+def test_balance(key, secret):
+    exchange = ccxt.gemini({
+        'apiKey': key,
+        'secret': secret
+    })
+    print(exchange.fetch_balance())
+
+
+def test_trades(key, secret, symbol):
+    exchange = ccxt.gemini({
+        'apiKey': key,
+        'secret': secret
+    })
+    print(exchange.fetch_my_trades(symbol=symbol))
+
+
+def test_markets(key, secret):
+    exchange = ccxt.gemini({
+        'apiKey': key,
+        'secret': secret
+    })
+    print(exchange.fetch_markets())
+
+
 @click.group()
 @click.password_option()
 @click.pass_context
@@ -80,6 +105,35 @@ def cli(ctx, password):
 @pass_config
 def add_exchange(config, name, key, secret):
     config.add_keys(name, key, secret)
+
+
+@cli.command()
+@pass_config
+def get_balance(config):
+    key = config.keys['gemini'].decode()
+    secret = config.secrets['gemini'].decode()
+    # print(key)
+    # print(secret)
+    print(test_balance(key, secret))
+
+
+@cli.command()
+@click.argument('symbol', nargs=1)
+@pass_config
+def get_trades(config, symbol):
+    key = config.keys['gemini'].decode()
+    secret = config.secrets['gemini'].decode()
+    print(test_trades(key, secret, symbol))
+
+
+@cli.command()
+@pass_config
+def get_markets(config):
+    key = config.keys['gemini'].decode()
+    secret = config.secrets['gemini'].decode()
+    # print(key)
+    # print(secret)
+    print(test_markets(key, secret))
 
 
 if __name__ == '__main__':
