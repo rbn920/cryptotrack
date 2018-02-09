@@ -3,6 +3,8 @@ import configparser
 import privy
 import os
 import ccxt
+import time
+import json
 
 
 class Config:
@@ -67,12 +69,17 @@ class Config:
 pass_config = click.make_pass_decorator(Config)
 
 
-def test_balance(key, secret):
-    exchange = ccxt.gemini({
-        'apiKey': key,
-        'secret': secret
-    })
-    print(exchange.fetch_balance())
+def get_exchange(name, key, secret):
+    return getattr(ccxt, name)({'apiKey': key, 'secret': secret})
+
+
+def test_balance(exchange, key, secret):
+    # exchange = ccxt.gemini({
+    #     'apiKey': key,
+    #     'secret': secret
+    # })
+    # print(exchange.fetch_balance())
+    print(get_exchange(exchange, key, secret).fetch_balance())
 
 
 def test_trades(key, secret, symbol):
@@ -80,15 +87,31 @@ def test_trades(key, secret, symbol):
         'apiKey': key,
         'secret': secret
     })
-    print(exchange.fetch_my_trades(symbol=symbol))
+    return exchange.fetch_my_trades(symbol=symbol)
 
 
 def test_markets(key, secret):
-    exchange = ccxt.gemini({
+    exchange = ccxt.binance({
         'apiKey': key,
         'secret': secret
     })
-    print(exchange.fetch_markets())
+    return exchange.fetch_markets()
+
+
+def parse_trade(trade):
+    parsed = {
+        'datetime': trade['datetime'],
+        'timestamp': trade['timestamp'],
+        'symbol': trade['symbol'],
+        'side': trade['side'],
+        'price': trade['price'],
+        'amount': trade['amount'],
+        'fee': trade['info']['fee_amount'],
+        'fee_currency': trade['info']['fee_currency'],
+        'exchange': trade['info']['exchange']
+    }
+
+    return parsed
 
 
 @click.group()
@@ -108,13 +131,12 @@ def add_exchange(config, name, key, secret):
 
 
 @cli.command()
+@click.argument('exchange', nargs=1)
 @pass_config
-def get_balance(config):
-    key = config.keys['gemini'].decode()
-    secret = config.secrets['gemini'].decode()
-    # print(key)
-    # print(secret)
-    print(test_balance(key, secret))
+def get_balance(config, exchange):
+    key = config.keys[exchange].decode()
+    secret = config.secrets[exchange].decode()
+    print(test_balance(exchange, key, secret))
 
 
 @cli.command()
@@ -123,17 +145,41 @@ def get_balance(config):
 def get_trades(config, symbol):
     key = config.keys['gemini'].decode()
     secret = config.secrets['gemini'].decode()
-    print(test_trades(key, secret, symbol))
+    trades = test_trades(key, secret, symbol)
+    print(trades)
 
 
 @cli.command()
 @pass_config
 def get_markets(config):
-    key = config.keys['gemini'].decode()
-    secret = config.secrets['gemini'].decode()
+    key = config.keys['binance'].decode()
+    secret = config.secrets['binance'].decode()
     # print(key)
     # print(secret)
     print(test_markets(key, secret))
+
+
+@cli.command()
+@pass_config
+def get_trade_history(config):
+    key = config.keys['gemini'].decode()
+    secret = config.secrets['gemini'].decode()
+    symbols = []
+    for market in test_markets(key, secret):
+        symbols.append(market['symbol'])
+    history = []
+    for symbol in symbols:
+        history.append(test_trades(key, secret, symbol))
+        if not history:
+            time.sleep(0.1)
+
+    trades = []
+    for symbol in history:
+        for trade in symbol:
+            trades.append(parse_trade(trade))
+
+    with open('trade_history.json', 'w') as fp:
+        json.dump(trades, fp)
 
 
 if __name__ == '__main__':
