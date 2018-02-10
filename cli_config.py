@@ -36,6 +36,9 @@ class Config:
         self.password = privy.peek(enc_password, password)
         self.existing = self.config.has_section('keys')
         if self.existing:
+            # t = {k: self.config['keys'][k] for k in self.config['keys']}
+            # print(t['gemini'])
+            # print(privy.peek(t['gemini'].encode(), self.password))
             self.keys = {k: privy.peek(self.config['keys'][k], self.password) for
                          k in self.config['keys']}
             self.secrets = {k: privy.peek(self.config['secrets'][k], self.password) for
@@ -57,12 +60,18 @@ class Config:
                 privy.peek(secret, self.password)]
 
     def add_keys(self, name, key, secret):
-        enc_key, enc_secret = self.__encrypt(key, secret)
-        self.keys[name] = enc_key
-        self.secrets[name] = enc_secret
-        self.config['keys'] = self.keys
-        self.config['secrets'] = self.secrets
+        self.keys[name] = key.encode()
+        self.secrets[name] = secret.encode()
         print('Encrypting your credential...')
+        enc_keys = {}
+        enc_secrets = {}
+        for k in self.keys:
+            enc_keys[k] = privy.hide(self.keys[k], self.password, security=5)
+        for k in self.secrets:
+            enc_secrets[k] = privy.hide(self.secrets[k], self.password, security=5)
+
+        self.config['keys'] = enc_keys
+        self.config['secrets'] = enc_secrets
         self.config.write(open('config.ini', 'w'))
 
 
@@ -180,6 +189,12 @@ def get_trade_history(config):
 
     with open('trade_history.json', 'w') as fp:
         json.dump(trades, fp)
+
+
+@cli.command()
+@pass_config
+def get_keys(config):
+    return
 
 
 if __name__ == '__main__':
