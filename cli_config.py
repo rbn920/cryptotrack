@@ -89,10 +89,16 @@ def get_balance(name, key, secret):
     return exchange.fetch_balance()
 
 
-def get_trades(name, key, secret, symbol):
+def get_my_trades(name, key, secret, symbol):
     exchange = get_exchange(name, key, secret)
     time.sleep(exchange.rateLimit / 1000)
     return exchange.fetch_my_trades(symbol=symbol)
+
+
+def get_trades(name, key, secret, symbol):
+    exchange = get_exchange(name, key, secret)
+    time.sleep(exchange.rateLimit / 1000)
+    return exchange.fetch_trades(symbol=symbol)
 
 
 def get_markets(name, key, secret):
@@ -133,6 +139,18 @@ def add_exchange(config, name, key, secret):
 
 
 @cli.command()
+@pass_config
+def api_keys(config):
+    print('keys')
+    for k in config.keys:
+        print('{}: {}'.format(k, config.keys[k].decode()))
+
+    print('secrets')
+    for k in config.secrets:
+        print('{}: {}'.format(k, config.secrets[k].decode()))
+
+
+@cli.command()
 @click.argument('exchange', nargs=1)
 @pass_config
 def balance(config, exchange):
@@ -148,7 +166,17 @@ def balance(config, exchange):
 def trades(config, exchange, symbol):
     key = config.keys[exchange].decode()
     secret = config.secrets[exchange].decode()
-    print(get_trades(exchange, key, secret, symbol))
+    print(get_trades(exchange, key, secret, symbol)[0])
+
+
+@cli.command()
+@click.argument('exchange', nargs=1)
+@click.argument('symbol', nargs=1)
+@pass_config
+def my_trades(config, exchange, symbol):
+    key = config.keys[exchange].decode()
+    secret = config.secrets[exchange].decode()
+    print(get_my_trades(exchange, key, secret, symbol))
 
 
 @cli.command()
@@ -172,7 +200,7 @@ def trade_history(config, exchange):
         symbols.append(market['symbol'])
     history = []
     for symbol in symbols:
-        history.append(get_trades(exchange, key, secret, symbol))
+        history.append(get_my_trades(exchange, key, secret, symbol))
         # if not history:
         #     time.sleep(0.1)
 
