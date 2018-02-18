@@ -1,3 +1,7 @@
-/__pycache__
-*.ini
-*.json
+/nbproject/
+/.idea/*
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
