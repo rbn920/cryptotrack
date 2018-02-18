@@ -6,3 +6,4 @@ dependencies:
 - pip:
    - privy
    - ccxt
+   - cfscrape

@@ -5,6 +5,7 @@ import os
 import ccxt
 import time
 import json
+import cfscrape
 from timeit import default_timer as timer
 
 
@@ -81,7 +82,9 @@ pass_config = click.make_pass_decorator(Config)
 
 def get_exchange(name, key, secret):
     return getattr(ccxt, name)({'apiKey': key, 'secret': secret,
-                                'nonce': lambda: time.time() * 10000})
+                                'nonce': lambda: time.time() * 10000,
+                                'timeout': 30000,
+                                'session': cfscrape.create_scraper()})
 
 
 def get_balance(name, key, secret):
